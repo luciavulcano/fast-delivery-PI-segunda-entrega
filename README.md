@@ -124,7 +124,7 @@ Pages** (frontend React).
    [`render.yaml`](render.yaml) cria o serviço `fastdelivery-api` (Docker, plano free).
 3. Preencher as variáveis de ambiente pedidas:
    - `DATABASE_URL` → a connection string do Neon.
-   - `CORS_ORIGIN` → `https://SEU-USUARIO.github.io` (sem barra no final).
+   - `CORS_ORIGIN` → `https://luciavulcano.github.io` (sem barra no final).
    - `JWT_SECRET` já é gerado automaticamente.
 4. O deploy roda `prisma migrate deploy` sozinho e sobe a API. A URL fica algo como
    `https://fastdelivery-api.onrender.com`.
@@ -140,7 +140,7 @@ Pages** (frontend React).
    `VITE_API_URL` = `https://fastdelivery-api.onrender.com/api`.
 3. O workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)
    builda e publica a cada push em `main` que altere `front/`. O site fica em
-   `https://SEU-USUARIO.github.io/fast-delivery/`.
+   `https://luciavulcano.github.io/fast-delivery-PI-segunda-entrega/`.
 4. Confirmar que o `CORS_ORIGIN` no Render bate com esse domínio.
 
 O frontend usa `HashRouter`, então as rotas funcionam no GitHub Pages sem
