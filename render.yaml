@@ -1,6 +1,21 @@
-# Blueprint do Render — cria a API FastDelivery a partir deste repositório.
-# No painel do Render: New > Blueprint > conecte o repo. Depois preencha
-# as variáveis marcadas como sync:false (DATABASE_URL e CORS_ORIGIN).
+# Blueprint do Render — cria a API FastDelivery + banco PostgreSQL a partir deste repositório.
+#
+# No painel do Render: New > Blueprint > conecte o repo.
+# A única variável que você precisa preencher é CORS_ORIGIN (sync:false):
+#   valor = origem do frontend no GitHub Pages, ex.: https://luciavulcano.github.io
+#
+# O DATABASE_URL é preenchido automaticamente pelo banco abaixo.
+# Se preferir um Postgres gratuito permanente (o do Render expira em 30 dias),
+# use o Neon (https://neon.tech): remova o bloco `databases` e a linha
+# `fromDatabase`, e defina DATABASE_URL como `sync: false` para colar a
+# connection string do Neon (com ?sslmode=require).
+
+databases:
+  - name: fastdelivery-db
+    plan: free
+    databaseName: fastdelivery
+    user: fastdelivery
+
 services:
   - type: web
     name: fastdelivery-api
@@ -11,10 +26,11 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
-      # Connection string do PostgreSQL do Neon (inclua ?sslmode=require)
       - key: DATABASE_URL
-        sync: false
-      # Origem do frontend no GitHub Pages, ex.: https://SEU-USUARIO.github.io
+        fromDatabase:
+          name: fastdelivery-db
+          property: connectionString
+      # Origem do frontend no GitHub Pages, ex.: https://luciavulcano.github.io
       - key: CORS_ORIGIN
         sync: false
       - key: JWT_SECRET

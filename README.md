@@ -107,37 +107,40 @@ npm run dev                   # http://localhost:5173
 
 ## Publicação em nuvem (gratuita)
 
-Arquitetura: **Neon** (PostgreSQL) → **Render** (API NestJS em Docker) → **GitHub
-Pages** (frontend React).
+Arquitetura: **Render** (PostgreSQL + API NestJS em Docker) → **GitHub Pages**
+(frontend React).
 
-### 1. Banco — Neon (https://neon.tech)
-
-1. Criar conta e um projeto (`fastdelivery`), região mais próxima.
-2. Copiar a **connection string** (formato
-   `postgresql://user:senha@ep-xxx.sa-east-1.aws.neon.tech/fastdelivery?sslmode=require`).
-3. Guardar esse valor — é o `DATABASE_URL` da API.
-
-### 2. Backend — Render (https://render.com)
+### 1. Backend + banco — Render (https://render.com), via Blueprint
 
 1. Subir este repositório no GitHub.
 2. No Render: **New > Blueprint** e selecionar o repo. O arquivo
-   [`render.yaml`](render.yaml) cria o serviço `fastdelivery-api` (Docker, plano free).
-3. Preencher as variáveis de ambiente pedidas:
-   - `DATABASE_URL` → a connection string do Neon.
-   - `CORS_ORIGIN` → `https://luciavulcano.github.io` (sem barra no final).
-   - `JWT_SECRET` já é gerado automaticamente.
-4. O deploy roda `prisma migrate deploy` sozinho e sobe a API. A URL fica algo como
-   `https://fastdelivery-api.onrender.com`.
-5. (Opcional) Popular dados: em **Shell** do serviço, rodar `npm run db:seed`.
+   [`render.yaml`](render.yaml) cria, de uma vez:
+   - `fastdelivery-db` — PostgreSQL (plano free);
+   - `fastdelivery-api` — API em Docker (plano free), com `DATABASE_URL` já
+     conectado ao banco e `JWT_SECRET` gerado automaticamente.
+3. A única variável a preencher é **`CORS_ORIGIN`** =
+   `https://luciavulcano.github.io` (sem barra no final).
+4. No primeiro boot o container roda sozinho `prisma migrate deploy` **e o seed**
+   (idempotente), então os dados de teste já ficam disponíveis. A URL fica algo
+   como `https://fastdelivery-api.onrender.com`.
+5. Testar: abrir `https://fastdelivery-api.onrender.com/api/health` (deve
+   responder `{"status":"ok","db":"up"}`).
+
+> **Postgres free do Render expira após 30 dias.** Para um banco gratuito
+> permanente, use o **Neon** (https://neon.tech): no `render.yaml`, remova o bloco
+> `databases` e a linha `fromDatabase`, marque `DATABASE_URL` como `sync: false` e
+> cole a connection string do Neon (com `?sslmode=require`).
 
 > Plano free do Render hiberna após 15 min sem tráfego; a primeira requisição depois
 > disso leva ~1 min para responder. Basta abrir a URL uma vez antes de apresentar.
 
-### 3. Frontend — GitHub Pages
+### 2. Frontend — GitHub Pages
 
 1. No repo: **Settings > Pages > Source: GitHub Actions**.
-2. **Settings > Secrets and variables > Actions > Variables** → criar
-   `VITE_API_URL` = `https://fastdelivery-api.onrender.com/api`.
+2. **Settings > Secrets and variables > Actions > Variables** (aba _Variables_,
+   **não** Secrets) → criar `VITE_API_URL` = `https://fastdelivery-api.onrender.com/api`.
+   Sem essa variável o build sai com a URL vazia e o site dá **Erro 404** ao
+   listar restaurantes.
 3. O workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)
    builda e publica a cada push em `main` que altere `front/`. O site fica em
    `https://luciavulcano.github.io/fast-delivery-PI-segunda-entrega/`.
