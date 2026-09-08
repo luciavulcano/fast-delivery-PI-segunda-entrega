@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fastdelivery-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fastdelivery
+      POSTGRES_PASSWORD: fastdelivery
+      POSTGRES_DB: fastdelivery
+    ports:
+      - "5432:5432"
+    volumes:
+      - fastdelivery_pgdata:/var/lib/postgresql/data
+
+volumes:
+  fastdelivery_pgdata:

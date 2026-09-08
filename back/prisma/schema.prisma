@@ -1,0 +1,250 @@
+// FastDelivery - Modelo físico de banco de dados
+// Banco: PostgreSQL | ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Usuários e autenticação
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  CLIENT // Cliente final
+  MERCHANT // Estabelecimento parceiro
+  COURIER // Entregador
+  ADMIN // Administrador da plataforma
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         UserRole @default(CLIENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  addresses  Address[]
+  restaurant Restaurant? // preenchido quando role = MERCHANT
+  courier    Courier? // preenchido quando role = COURIER
+  orders     Order[]     @relation("CustomerOrders")
+  reviews    Review[]
+
+  @@map("users")
+}
+
+model Address {
+  id           String  @id @default(uuid())
+  userId       String
+  label        String? // "Casa", "Trabalho"
+  street       String
+  number       String
+  complement   String?
+  district     String
+  city         String
+  state        String
+  zipCode      String
+  latitude     Float?
+  longitude    Float?
+  isDefault    Boolean @default(false)
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+// ---------------------------------------------------------------------------
+// Estabelecimentos e cardápio
+// ---------------------------------------------------------------------------
+
+model Restaurant {
+  id            String   @id @default(uuid())
+  ownerId       String   @unique
+  name          String
+  description   String?
+  category      String // "Pizzaria", "Japonesa", "Lanches"...
+  phone         String?
+  logoUrl       String?
+  isOpen        Boolean  @default(true)
+  deliveryFee   Decimal  @db.Decimal(10, 2) @default(0)
+  minOrder      Decimal  @db.Decimal(10, 2) @default(0)
+  etaMinMinutes Int      @default(30)
+  etaMaxMinutes Int      @default(60)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  menuItems   MenuItem[]
+  orders      Order[]
+
+  @@index([category])
+  @@map("restaurants")
+}
+
+model MenuItem {
+  id           String   @id @default(uuid())
+  restaurantId String
+  name         String
+  description  String?
+  price        Decimal  @db.Decimal(10, 2)
+  imageUrl     String?
+  category     String? // seção do cardápio: "Entradas", "Bebidas"
+  isAvailable  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([restaurantId])
+  @@map("menu_items")
+}
+
+// ---------------------------------------------------------------------------
+// Entregadores
+// ---------------------------------------------------------------------------
+
+model Courier {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  vehicleType   String // "BIKE", "MOTO", "CAR"
+  licensePlate  String?
+  isAvailable   Boolean  @default(false)
+  currentLat    Float?
+  currentLng    Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@map("couriers")
+}
+
+// ---------------------------------------------------------------------------
+// Pedidos
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  PENDING // aguardando confirmação do restaurante
+  CONFIRMED // aceito pelo restaurante
+  PREPARING // em preparo
+  READY // pronto para retirada
+  DISPATCHED // saiu para entrega
+  DELIVERED // entregue
+  CANCELLED // cancelado
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  PIX
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  customerId     String
+  restaurantId   String
+  courierId      String?
+  addressId      String
+  status         OrderStatus @default(PENDING)
+  subtotal       Decimal     @db.Decimal(10, 2)
+  deliveryFee    Decimal     @db.Decimal(10, 2) @default(0)
+  total          Decimal     @db.Decimal(10, 2)
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  customer   User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
+  courier    Courier?    @relation(fields: [courierId], references: [id])
+  address    Address     @relation(fields: [addressId], references: [id])
+  items      OrderItem[]
+  payment    Payment?
+  review     Review?
+  tracking   TrackingEvent[]
+
+  @@index([customerId])
+  @@index([restaurantId])
+  @@index([courierId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  orderId    String
+  menuItemId String
+  nameSnapshot String // nome do item no momento do pedido
+  unitPrice  Decimal @db.Decimal(10, 2)
+  quantity   Int
+  notes      String?
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  orderId     String        @unique
+  method      PaymentMethod
+  status      PaymentStatus @default(PENDING)
+  amount      Decimal       @db.Decimal(10, 2)
+  providerRef String? // id da transação no gateway
+  paidAt      DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model TrackingEvent {
+  id        String      @id @default(uuid())
+  orderId   String
+  status    OrderStatus
+  latitude  Float?
+  longitude Float?
+  message   String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("tracking_events")
+}
+
+model Review {
+  id           String   @id @default(uuid())
+  orderId      String   @unique
+  authorId     String
+  rating       Int // 1 a 5
+  comment      String?
+  createdAt    DateTime @default(now())
+
+  order  Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id])
+
+  @@map("reviews")
+}

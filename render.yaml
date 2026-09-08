@@ -1,0 +1,23 @@
+# Blueprint do Render — cria a API FastDelivery a partir deste repositório.
+# No painel do Render: New > Blueprint > conecte o repo. Depois preencha
+# as variáveis marcadas como sync:false (DATABASE_URL e CORS_ORIGIN).
+services:
+  - type: web
+    name: fastdelivery-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./back/Dockerfile
+    dockerContext: ./back
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Connection string do PostgreSQL do Neon (inclua ?sslmode=require)
+      - key: DATABASE_URL
+        sync: false
+      # Origem do frontend no GitHub Pages, ex.: https://SEU-USUARIO.github.io
+      - key: CORS_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
