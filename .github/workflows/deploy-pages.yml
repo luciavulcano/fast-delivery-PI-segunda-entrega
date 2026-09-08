@@ -34,6 +34,11 @@ jobs:
 
       - run: npm ci
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - name: Build
         env:
           # Defina em Settings > Secrets and variables > Actions > Variables
