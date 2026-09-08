@@ -10,6 +10,9 @@ Centro Universitário Senac (Santo Amaro) — 2026.
 
 - Lucia Vulcano de Andrada
 - Thiago Silva Quintino dos Santos
+- Nicolas de Sousa Fernandes
+- Vicente de Paula da Silva
+- Andersson Martins Conserva
 
 ## Stack
 
