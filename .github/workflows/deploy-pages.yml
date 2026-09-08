@@ -36,9 +36,7 @@ jobs:
 
       - name: Build
         env:
-          # Defina em Settings > Secrets and variables > Actions > Variables
-          # ex.: https://fastdelivery-api.onrender.com/api
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          # VITE_API_URL vem de front/.env.production (versionado no repo).
           VITE_BASE: /${{ github.event.repository.name }}/
         run: npm run build
 
